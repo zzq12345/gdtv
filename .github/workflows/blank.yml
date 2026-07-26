@@ -25,7 +25,7 @@ jobs:
       - name: 设置 Node.js (仅当 wasm 存在时用于签名)
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: 生成 m3u（自动尝试签名，失败则降级备选源）
         run: |
