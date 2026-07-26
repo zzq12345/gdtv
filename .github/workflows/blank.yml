@@ -1,0 +1,57 @@
+name: 每小时生成广东卫视直播 m3u（强制签名）
+
+on:
+  schedule:
+    - cron: '0 * * * *'          # 每整点运行
+  workflow_dispatch:             # 支持手动触发
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: 安装 Python 依赖
+        run: |
+          pip install -r requirements.txt
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: 验证 wasm 文件存在
+        run: |
+          if [ ! -f lizhi.wasm ]; then
+            echo "错误：仓库根目录缺少 lizhi.wasm 文件，无法签名。"
+            exit 1
+          fi
+          echo "✅ lizhi.wasm 已找到"
+
+      - name: 生成带签名的 m3u8 并输出 m3u
+        run: |
+          python generate_signed_m3u.py
+
+      - name: 上传构建产物（Artifact）
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdws-signed-m3u
+          path: gdws.m3u
+          retention-days: 1
+
+      - name: 部署到 GitHub Pages
+        if: success()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          publish_branch: gh-pages
+          keep_files: false
+          destination_dir: ./
