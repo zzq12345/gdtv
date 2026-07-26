@@ -1,4 +1,4 @@
-name: 每小时生成广东卫视直播 m3u（强制签名）
+name: 每小时生成广东卫视直播 m3u
 
 on:
   schedule:
@@ -22,19 +22,31 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: 设置 Node.js
+      - name: 设置 Node.js (仅当 wasm 存在时用于签名)
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
-      - name: 验证 wasm 文件存在
+      - name: 生成 m3u（自动尝试签名，失败则降级备选源）
         run: |
-          if [ ! -f lizhi.wasm ]; then
-            echo "错误：仓库根目录缺少 lizhi.wasm 文件，无法签名。"
-            exit 1
-          fi
-          echo "✅ lizhi.wasm 已找到"
+          python generate_m3u.py
 
+      - name: 上传构建产物（Artifact）
+        uses: actions/upload-artifact@v4
+        with:
+          name: gdws-live-m3u
+          path: gdws.m3u
+          retention-days: 1
+
+      - name: 部署到 GitHub Pages
+        if: success()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
+          publish_branch: gh-pages
+          keep_files: false
+          destination_dir: ./
       - name: 生成带签名的 m3u8 并输出 m3u
         run: |
           python generate_signed_m3u.py
